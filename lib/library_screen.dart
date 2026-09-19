@@ -17,7 +17,7 @@ class LibraryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(10.0),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.8,
+          childAspectRatio: 0.75,
           crossAxisSpacing: 10.0,
           mainAxisSpacing: 10.0,
         ),
@@ -39,17 +39,22 @@ class PuzzleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: Stack(
-        children:[
-          Positioned.fill(child: PuzzleArtwork(puzzle: puzzle),),
-          Positioned(
-            bottom: 10,
-            left: 10,
-            right: 10,
-            child: PuzzleLabel(puzzle: puzzle),
-          )
-        ]
+    return Container(
+      decoration: BoxDecoration(
+        color: puzzle.color,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: Color.lerp(puzzle.color, Colors.black, 0.25)!,
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(12.0),
+        child: Column(
+          children: [
+            PuzzleArtwork(puzzle: puzzle),
+            Expanded(child: PuzzleLabel(puzzle: puzzle)),
+          ],
+        ), 
       )
     );
   }
@@ -61,8 +66,11 @@ class PuzzleArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: puzzle.color,
+    return AspectRatio(
+      aspectRatio: 1.25,
+      child: Container(
+        color: Colors.white,
+      ),
     );
   }
 }
@@ -73,12 +81,23 @@ class PuzzleLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-          Text(puzzle.displayName, textAlign: TextAlign.left, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),),
-          Text(puzzle.descriptor),
-      ],
-    );
+    return Container( 
+        padding: const EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 0.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+              Text(
+                puzzle.displayName, 
+                textAlign: TextAlign.left, 
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold, 
+                  color: Color.lerp(puzzle.color, Colors.black, 0.75)!),
+                ),
+              Text(puzzle.descriptor),
+          ],
+        )
+      );
   }
 }
