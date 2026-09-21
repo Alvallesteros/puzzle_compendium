@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:puzzle_arcade/puzzle_catalog.dart";
+import "package:puzzle_arcade/puzzle_screen.dart";
 
 
 
@@ -26,6 +27,14 @@ class LibraryScreen extends StatelessWidget {
           final puzzle = puzzleCatalog[index];
           return PuzzleCard(
             puzzle: puzzle,
+            onTap: () {
+              Navigator.push (
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PuzzleScreen(puzzle: puzzle),
+                )
+              );
+            }
           );
         },
       ),
@@ -34,27 +43,31 @@ class LibraryScreen extends StatelessWidget {
 }
 
 class PuzzleCard extends StatelessWidget {
-  const PuzzleCard({super.key, required this.puzzle});
+  const PuzzleCard({super.key, required this.puzzle, this.onTap});
   final PuzzleDefinition puzzle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: puzzle.color,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(
-          color: Color.lerp(puzzle.color, Colors.black, 0.25)!,
-          width: 1.5,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(  
+        decoration: BoxDecoration(
+          color: puzzle.color,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: Color.lerp(puzzle.color, Colors.black, 0.25)!,
+            width: 1.5,
+          ),
         ),
-      ),
-      child: ClipRRect(borderRadius: BorderRadius.circular(12.0),
-        child: Column(
-          children: [
-            PuzzleArtwork(puzzle: puzzle),
-            Expanded(child: PuzzleLabel(puzzle: puzzle)),
-          ],
-        ), 
+        child: ClipRRect(borderRadius: BorderRadius.circular(12.0),
+          child: Column(
+            children: [
+              PuzzleArtwork(puzzle: puzzle),
+              Expanded(child: PuzzleLabel(puzzle: puzzle)),
+            ],
+          ), 
+        )
       )
     );
   }
