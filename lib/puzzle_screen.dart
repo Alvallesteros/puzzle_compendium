@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:puzzle_arcade/puzzle_catalog.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_body.dart';
+import 'package:puzzle_arcade/sudoku/sudoku_session.dart';
 
 class PuzzleScreen extends StatelessWidget {
   const PuzzleScreen({super.key, required this.puzzle});
@@ -16,21 +16,13 @@ class PuzzleScreen extends StatelessWidget {
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('MENU COMING SOON')
+                  content: const Text('MENU COMING SOON')
                 )
               );
             },
           )
         ]),
-      body: Center(
-        child: Column(
-          children: [
-            Expanded(
-              child: PuzzleArea(puzzle: puzzle),),
-            InputArea()
-          ]
-        )
-      )
+      body: PuzzleArea(puzzle: puzzle)
     );
   }
 }
@@ -43,28 +35,23 @@ class PuzzleArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    switch (puzzle.identity) {
-      case PuzzleType.Sudoku:
-        return const SudokuBody();
-      default:
-      return Container(
-          color: puzzle.color,
-          child: Center(child: Text(puzzle.displayName))
-        );
-    }
+    return switch (puzzle.identity) {
+      PuzzleType.Sudoku => const SudokuSession(),
+      PuzzleType.Shikaku => PlaceholderBody(puzzle: puzzle),
+      PuzzleType.Queens => PlaceholderBody(puzzle: puzzle),   
+    };
   }
 }
 
-// Input Area stateless for now
-class InputArea extends StatelessWidget {
-  const InputArea({super.key});
+class PlaceholderBody extends StatelessWidget {
+  const PlaceholderBody({super.key, required this.puzzle});
+  final PuzzleDefinition puzzle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 250,
-      color: Colors.grey[200],
-      child: Center(child: Text('Input Area'))
-    );
+       color: puzzle.color,
+       child: Center(child: Text(puzzle.displayName))
+     );
   }
 }
