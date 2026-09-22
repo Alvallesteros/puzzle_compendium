@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:puzzle_arcade/puzzle_catalog.dart';
+import 'package:puzzle_arcade/sudoku/sudoku_body.dart';
 
 class PuzzleScreen extends StatelessWidget {
   const PuzzleScreen({super.key, required this.puzzle});
@@ -24,7 +25,8 @@ class PuzzleScreen extends StatelessWidget {
       body: Center(
         child: Column(
           children: [
-            Expanded(child: PuzzleArea(puzzle: puzzle),),
+            Expanded(
+              child: PuzzleArea(puzzle: puzzle),),
             InputArea()
           ]
         )
@@ -38,12 +40,18 @@ class PuzzleArea extends StatelessWidget {
   const PuzzleArea({super.key, required this.puzzle});
   final PuzzleDefinition puzzle;
 
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: puzzle.color,
-      child: Center(child: Text(puzzle.displayName))
-    );
+    switch (puzzle.identity) {
+      case PuzzleType.Sudoku:
+        return const SudokuBody();
+      default:
+      return Container(
+          color: puzzle.color,
+          child: Center(child: Text(puzzle.displayName))
+        );
+    }
   }
 }
 
