@@ -4,14 +4,17 @@ class SudokuCell extends StatelessWidget {
   SudokuCell({
     super.key, 
     required this.value, 
-    required this.isGiven, 
+    required this.isGiven,
+    required this.isInvalid, 
     required this.isSelected, 
     required this.onTap, 
     this.thickRightBorder = false, 
-    this.thickBottomBorder = false});
+    this.thickBottomBorder = false
+  });
 
   final int? value;
   final bool isGiven;
+  final bool isInvalid;
   final bool isSelected;
   final VoidCallback onTap;
   final bool thickRightBorder;
@@ -23,7 +26,11 @@ class SudokuCell extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blueAccent: Colors.white,
+          color: isSelected
+              ? Colors.lightBlue
+              : isInvalid
+                  ? Colors.red
+                  : Colors.white,
           border: Border(
             right: BorderSide(color: Colors.black, width: thickRightBorder ? 3.0 : 1.0),
             bottom: BorderSide(color: Colors.black, width: thickBottomBorder ? 3.0 : 1.0),

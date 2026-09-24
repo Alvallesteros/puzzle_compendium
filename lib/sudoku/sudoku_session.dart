@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_cell.dart';
 import 'package:puzzle_arcade/sudoku/num_pad.dart';
+import 'package:puzzle_arcade/sudoku/sudoku_validator.dart';
 
 class SudokuSession extends StatefulWidget {
   const SudokuSession({super.key});
@@ -12,7 +13,6 @@ class SudokuSession extends StatefulWidget {
 
 class _SudokuSessionState extends State<SudokuSession>{
   final SudokuPuzzle sudokuGrid = SudokuPuzzle.sample();
-
   (int, int)? selectedCell;
   final Map<(int, int), int> enteredValues = {};
 
@@ -42,10 +42,29 @@ class _SudokuSessionState extends State<SudokuSession>{
     setState(() {
       enteredValues[(row, col)] = digit;
     });
+
+    final result = findConflicts(sudokuGrid, enteredValues);
+    if (result.isFull && result.invalid.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Puzzle complete'),
+          content: const Text('You solved the Sudoku puzzle.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final result = findConflicts(sudokuGrid, enteredValues);
+
     return Column (
       children: [
         // GRID ==============================
@@ -67,6 +86,7 @@ class _SudokuSessionState extends State<SudokuSession>{
                                 value: _displayValueAt(row, col), 
                                 isGiven: sudokuGrid.isGiven(row, col), 
                                 isSelected: selectedCell == (row, col),
+                                isInvalid: result.invalid.contains((row, col)),
                                 thickRightBorder: col % 3 == 2 && col != 8,
                                 thickBottomBorder: row % 3 == 2 && row != 8,
                                 onTap: () => _select(row, col)
