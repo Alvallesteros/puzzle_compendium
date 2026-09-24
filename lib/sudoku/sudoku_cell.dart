@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SudokuCell extends StatelessWidget {
-  SudokuCell({
+  const SudokuCell({
     super.key, 
     required this.value, 
     required this.isGiven,

@@ -59,11 +59,4 @@ class SudokuPuzzle {
       ),
     );
   } 
-
-  static SudokuPuzzle empty() {
-    return SudokuPuzzle(
-      grid: List.generate(9, (_) => List.generate(9, (_) => null)),
-      givens: List.generate(9, (_) => List.generate(9, (_) => false)),
-    );
-  }
 }
