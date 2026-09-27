@@ -17,9 +17,43 @@ class _SudokuSessionState extends State<SudokuSession>{
   final Map<(int, int), int> enteredValues = {};
 
   void _select (int row, int col) {
-    setState(() {
-      selectedCell = (row, col);
-    });
+    if (selectedCell != (row, col)) {
+      setState(() {
+        selectedCell = (row, col);
+      });
+    } else {
+      setState(() {
+        selectedCell = null;
+      });
+    } 
+  }
+
+  Set<(int, int)> _peersOf((int row, int col) cell) {
+    final (row, col) = cell;
+    Set<(int, int)> peers = {};
+
+    // Iterator of Cells (Row-Col)
+    for (int i = 0; i < 9; i++) {
+      if (col != i) {
+        peers.add((row, i));
+      } // Row Peers
+      if (row != i) {
+        peers.add((i, col));
+      } // Col Peers
+    }
+
+    // Iterator of Cells (Box)
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        final peer = (((row ~/ 3) * 3) + i,((col ~/ 3) * 3) + j);
+        if (cell != peer) {
+          peers.add(peer);
+        }
+      }
+    }
+
+    return peers;
   }
 
   int? _displayValueAt(int row, int col) {
@@ -61,9 +95,26 @@ class _SudokuSessionState extends State<SudokuSession>{
     }
   }
 
+  void _eraseSelected() {
+    if (selectedCell == null) {
+      return;
+    }
+    final (row, col) = selectedCell!;
+    if (sudokuGrid.isGiven(row, col)) {
+      return;
+    }
+    if (!enteredValues.containsKey(selectedCell)) {
+      return;
+    }
+    setState(() {
+      enteredValues.remove(selectedCell);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final result = findConflicts(sudokuGrid, enteredValues);
+    Set<(int, int)> peers = selectedCell == null ? {} : _peersOf(selectedCell!);
 
     return Column (
       children: [
@@ -87,6 +138,7 @@ class _SudokuSessionState extends State<SudokuSession>{
                                 isGiven: sudokuGrid.isGiven(row, col), 
                                 isSelected: selectedCell == (row, col),
                                 isInvalid: result.invalid.contains((row, col)),
+                                isPeer: peers.contains((row, col)),
                                 thickRightBorder: col % 3 == 2 && col != 8,
                                 thickBottomBorder: row % 3 == 2 && row != 8,
                                 onTap: () => _select(row, col)
@@ -102,7 +154,10 @@ class _SudokuSessionState extends State<SudokuSession>{
             )
           ),
       // NUM PAD ==============================
-        NumberPad(onDigit: _enterDigit)
+        NumberPad(
+          onDigit: _enterDigit,
+          onErase: _eraseSelected,
+        )
       ]
     );
   }
