@@ -41,7 +41,7 @@ class SudokuGenerator {
       } else {
         workingGrid[row][col] = save;
       }
-    };
+    }
 
     return workingGrid;
   }
