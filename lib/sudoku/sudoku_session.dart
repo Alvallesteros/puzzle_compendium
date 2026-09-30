@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_cell.dart';
 import 'package:puzzle_arcade/sudoku/num_pad.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_validator.dart';
+import 'package:puzzle_arcade/sudoku/sudoku_generator.dart';
+import 'package:puzzle_arcade/sudoku/sudoku_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/generated_puzzle.dart';
+import 'package:puzzle_arcade/env.dart';
 
 class SudokuSession extends StatefulWidget {
   const SudokuSession({super.key});
@@ -12,7 +15,7 @@ class SudokuSession extends StatefulWidget {
 }
 
 class _SudokuSessionState extends State<SudokuSession>{
-  final SudokuPuzzle sudokuGrid = SudokuPuzzle.sample();
+  final GeneratedPuzzle generated = SudokuGenerator.generate(currentSeed(), SudokuDifficulty(targetGivens: 79));
   (int, int)? selectedCell;
   final Map<(int, int), int> enteredValues = {};
 
@@ -61,7 +64,7 @@ class _SudokuSessionState extends State<SudokuSession>{
     if (enteredValues.containsKey(key)) {
       return enteredValues[key];
     } else {
-      return sudokuGrid.valueAt(row, col);
+      return generated.puzzle.valueAt(row, col);
     } 
   }
 
@@ -70,14 +73,14 @@ class _SudokuSessionState extends State<SudokuSession>{
       return;
     }
     final (row, col) = selectedCell!;
-    if (sudokuGrid.isGiven(row, col)) {
+    if (generated.puzzle.isGiven(row, col)) {
       return;
     }
     setState(() {
       enteredValues[(row, col)] = digit;
     });
 
-    final result = findConflicts(sudokuGrid, enteredValues);
+    final result = findConflicts(generated.puzzle, enteredValues);
     if (result.isFull && result.invalid.isEmpty) {
       showDialog(
         context: context,
@@ -100,7 +103,7 @@ class _SudokuSessionState extends State<SudokuSession>{
       return;
     }
     final (row, col) = selectedCell!;
-    if (sudokuGrid.isGiven(row, col)) {
+    if (generated.puzzle.isGiven(row, col)) {
       return;
     }
     if (!enteredValues.containsKey(selectedCell)) {
@@ -113,7 +116,7 @@ class _SudokuSessionState extends State<SudokuSession>{
 
   @override
   Widget build(BuildContext context) {
-    final result = findConflicts(sudokuGrid, enteredValues);
+    final result = findConflicts(generated.puzzle, enteredValues);
     Set<(int, int)> peers = selectedCell == null ? {} : _peersOf(selectedCell!);
 
     return Column (
@@ -135,7 +138,7 @@ class _SudokuSessionState extends State<SudokuSession>{
                             Expanded(
                               child: SudokuCell(
                                 value: _displayValueAt(row, col), 
-                                isGiven: sudokuGrid.isGiven(row, col), 
+                                isGiven: generated.puzzle.isGiven(row, col), 
                                 isSelected: selectedCell == (row, col),
                                 isInvalid: result.invalid.contains((row, col)),
                                 isPeer: peers.contains((row, col)),
