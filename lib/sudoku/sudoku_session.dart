@@ -3,7 +3,7 @@ import 'package:puzzle_arcade/sudoku/sudoku_cell.dart';
 import 'package:puzzle_arcade/sudoku/num_pad.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_validator.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_generator.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/given_count_difficulty.dart';
 import 'package:puzzle_arcade/sudoku/generated_puzzle.dart';
 import 'package:puzzle_arcade/env.dart';
 
@@ -15,7 +15,7 @@ class SudokuSession extends StatefulWidget {
 }
 
 class _SudokuSessionState extends State<SudokuSession>{
-  final GeneratedPuzzle generated = SudokuGenerator.generate(currentSeed(), SudokuDifficulty(targetGivens: 79));
+  final GeneratedPuzzle generated = SudokuGenerator.generate(currentSeed(), GivenCountDifficulty(targetGivens: 79));
   (int, int)? selectedCell;
   final Map<(int, int), int> enteredValues = {};
 

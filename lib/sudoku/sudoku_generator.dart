@@ -10,7 +10,7 @@ class SudokuGenerator {
 
   static GeneratedPuzzle generate(int seed, SudokuDifficulty difficulty) {
     final List<List<int>> fill = SudokuSolver.fillFullGrid(seed);
-    final List<List<int?>> working = _removeCells(fill, seed, difficulty.targetGivens);
+    final List<List<int?>> working = _removeCells(fill, seed, difficulty);
     final List<List<bool>> givens = _deriveGivens(working);
     final SudokuPuzzle puzzle = SudokuPuzzle(grid: working, givens: givens);
     
@@ -18,7 +18,7 @@ class SudokuGenerator {
   }
 
 
-  static List<List<int?>> _removeCells(List<List<int>> fill, int seed, int targetGivens) {
+  static List<List<int?>> _removeCells(List<List<int>> fill, int seed, SudokuDifficulty difficulty) {
     List<List<int?>> workingGrid = fill.map((row) => List<int?>.from(row)).toList();
     List<(int, int)> coordinateList = [
       for (int i = 0; i < 9; i++) 
@@ -27,17 +27,17 @@ class SudokuGenerator {
     ];
 
     coordinateList.shuffle(Random(seed));
-    int givensCounter = 81;
-
 
     for (final (row, col) in coordinateList) {
-      if (givensCounter <= targetGivens) {
+      SudokuPuzzle currentPuzzle = SudokuPuzzle(grid: workingGrid, givens: _deriveGivens(workingGrid));
+      if (difficulty.accepts(currentPuzzle)) {
         break;
       }
+
       int? save = workingGrid[row][col];
       workingGrid[row][col] = null;
       if (SudokuSolver.countSolutions(workingGrid, 2) == 1) {
-        givensCounter--;
+        continue;
       } else {
         workingGrid[row][col] = save;
       }
