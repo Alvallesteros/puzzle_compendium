@@ -8,7 +8,7 @@ class GivenCountDifficulty implements SudokuDifficulty {
   
   @override
   bool accepts(SudokuPuzzle puzzle) {
-    return _countGivens(puzzle) <= targetGivens;
+    return _countGivens(puzzle) == targetGivens;
   }
 
   int _countGivens(SudokuPuzzle puzzle) {

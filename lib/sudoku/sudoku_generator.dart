@@ -14,7 +14,7 @@ class SudokuGenerator {
     final difficulty = SolverClassifiedDifficulty(min: min, max: max);
     GeneratedPuzzle? best;
     int bestDistance = 9999999;
-    for(int attempt = 0; attempt < 5; attempt++) {
+    for(int attempt = 0; attempt < 10; attempt++) {
       int attemptSeed = seed + attempt;
       GeneratedPuzzle attemptPuzzle = SudokuGenerator.generate(attemptSeed, difficulty);
       if(difficulty.accepts(attemptPuzzle.puzzle)) {

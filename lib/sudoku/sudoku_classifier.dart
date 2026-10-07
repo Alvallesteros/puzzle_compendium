@@ -5,17 +5,36 @@ enum Technique {
   hiddenSingle,
   nakedPair,
   hiddenPair,
+  nakedTriple,
+  hiddenTriple,
+  nakedQuad,
+  hiddenQuad,
   pointingPair,
-  boxLineReduction;
+  pointingTriple,
+  boxLineReduction,
+  xWing;
 
   int get rank => switch (this) {
-        Technique.nakedSingle => 1,
-        Technique.hiddenSingle => 2,
-        Technique.nakedPair => 3,
-        Technique.hiddenPair => 4,
-        Technique.pointingPair => 5,
-        Technique.boxLineReduction => 6,
-      };
+    // Tier 1: Easy
+    Technique.nakedSingle       => 1,
+    Technique.hiddenSingle      => 2,
+
+    // Tier 2: Medium
+    Technique.pointingPair      => 3,
+    Technique.pointingTriple    => 4,
+    Technique.boxLineReduction  => 5,
+
+    // Tier 3: Medium-Hard
+    Technique.nakedPair         => 6,
+    Technique.hiddenPair        => 7,
+
+    // Tier 4: Hard
+    Technique.nakedTriple       => 8,
+    Technique.hiddenTriple      => 9,
+    Technique.xWing            => 10,
+    Technique.nakedQuad        => 11,
+    Technique.hiddenQuad       => 12,
+  };
 }
 
 typedef TechniqueApplication = ({Technique technique, int? row, int? col});
@@ -46,6 +65,31 @@ class SudokuClassifier {
         usedTechniques.add(nakedPair);
         continue;
       }
+      final hiddenPair = _applyHiddenPair(workingGrid, candidateMasks);
+      if (hiddenPair != null) {
+        usedTechniques.add(hiddenPair);
+        continue;
+      }
+      final nakedTriple = _applyNakedTriple(workingGrid, candidateMasks);
+      if (nakedTriple != null) {
+        usedTechniques.add(nakedTriple);
+        continue;
+      }
+      final hiddenTriple = _applyHiddenTriple(workingGrid, candidateMasks);
+      if (hiddenTriple != null) {
+        usedTechniques.add(hiddenTriple);
+        continue;
+      }
+      final nakedQuad = _applyNakedQuad(workingGrid, candidateMasks);
+      if (nakedQuad != null) {
+        usedTechniques.add(nakedQuad);
+        continue;
+      }
+      final hiddenQuad = _applyHiddenQuad(workingGrid, candidateMasks);
+      if (hiddenQuad != null) {
+        usedTechniques.add(hiddenQuad);
+        continue;
+      }
       break;
     }
 
@@ -74,15 +118,6 @@ class SudokuClassifier {
   static int _removeCandidate(int mask, int d) {
     return mask & ~_bitFor(d);
   }
-  static int _candidateCount(int mask) {
-    int count = 0;
-    for (int i = 1; i <= 9; i++ ) {
-      if (_hasCandidate(mask, i)) {
-        count++;
-      }
-    }
-    return count;
-  }
   static List<int> _candidatesOf(int mask) {
     List<int> candidates = [];
     for (int i = 1; i <= 9; i++) {
@@ -102,6 +137,26 @@ class SudokuClassifier {
     }
     return true;
   }  
+  static int _popCount(int x) {
+    int count = 0;
+    while (x != 0) {
+      x &= x - 1;
+      count++;
+    }
+    return count;
+  }
+  static List<int> _indicesFromBitmask(int mask) {
+    List<int> result = [];
+    int digit = 0;
+    while (mask != 0) {
+      if((mask & 1) != 0) {
+        result.add(digit);
+      }
+      mask >>= 1;
+      digit++;
+    }
+    return result;
+  }
 
   static List<List<int>> _buildCandidates(List<List<int?>> workingGrid) {
     List<List<int>> result = List.generate(9, (_) => List.filled(9, 0));
@@ -177,8 +232,8 @@ class SudokuClassifier {
     }
 
 
-
 // TECHNIQUES
+// FILL TECHNIQUES
   static TechniqueApplication? _applyNakedSingle(List<List<int?>> workingGrid, List<List<int>> candidates) {
     for (int row = 0; row < 9; row++) {
       for (int col = 0; col < 9; col++) {
@@ -186,7 +241,7 @@ class SudokuClassifier {
           continue;
         }
 
-        int count = _candidateCount(candidates[row][col]);
+        int count = _popCount(candidates[row][col]);
         if (count != 1) {
           continue;
         }
@@ -221,51 +276,135 @@ class SudokuClassifier {
     return null;
   }
 
-  static bool _eliminateNakedPairInUnit(List<(int, int)> cells, List<List<int?>> workingGrid, List<List<int>> candidates) {
-    Map<int, List<(int, int)>> cellMap = {};
-    bool changes = false;
+// NAKED SUBSETS
+  static bool _eliminateNakedSubsetInUnit(List<(int, int)> cells, List<List<int?>> workingGrid, List<List<int>> candidates, int N) {
+    List<(int, int)> eligible = [
+      for (final (int row, int col) in cells)
+        if (workingGrid[row][col] == null && _popCount(candidates[row][col]) <= N && _popCount(candidates[row][col]) >= 2) (row, col),
+    ];
 
-    for (final (int row, int col) in cells) {
-      if(workingGrid[row][col] == null && _candidateCount(candidates[row][col]) == 2) {
-        if (!cellMap.containsKey(candidates[row][col])) {
-          cellMap[candidates[row][col]] = [];
-        }
-        cellMap[candidates[row][col]]!.add((row, col));
-      } else {
-        continue;
-      }
-    }
+    if (eligible.length < N) {return false;}
 
-    List<(int, int)>? nakedPairCoordinates;
-    List<int>? nakedPair;
+    for (int mask = 0; mask < (1 << eligible.length); mask++) {
+      List<(int, int)> eligibleSubset = [];
+      if(_popCount(mask) == N) {
+        List<int> eligibleIndices = _indicesFromBitmask(mask);
+        int union = 0;
+        for (final index in eligibleIndices) {
+          int r = eligible[index].$1;
+          int c = eligible[index].$2;
+          eligibleSubset.add((r, c));
+          union |= candidates[r][c];
+        } 
 
-    for (final k in cellMap.keys) {
-      if (cellMap[k]!.length == 2) {
-        nakedPairCoordinates = cellMap[k];
-        nakedPair = _candidatesOf(k);
-        break;
-      }
-    }
-
-    
-    if (nakedPairCoordinates != null && nakedPair != null){
-      for (final (int row, int col) in cells) {
-        if (workingGrid[row][col] == null) {
-          for (final (int digit) in nakedPair) {
-            if (!nakedPairCoordinates.contains((row, col)) && _hasCandidate(candidates[row][col], digit)) {
-              candidates[row][col] = _removeCandidate(candidates[row][col], digit);
-              changes = true;
+        bool removed = false;
+        List<int> unionCandidates = _candidatesOf(union);
+        if (_popCount(union) == N) {
+          for (final (int row, int col) in cells) {
+            if (workingGrid[row][col] == null && !eligibleSubset.contains((row, col))) {
+              for (final digit in unionCandidates) {
+                int oldMask = candidates[row][col];
+                candidates[row][col] = _removeCandidate(candidates[row][col], digit);
+                if (oldMask != candidates[row][col]) removed = true;
+              }
             }
           }
+          if (removed) return removed;
         }
       }
     }
-    return changes;
+    return false;
   }
+
   static TechniqueApplication? _applyNakedPair(List<List<int?>> workingGrid, List<List<int>> candidates) {
     for (final unitCells in _allUnits()) {
-      if (_eliminateNakedPairInUnit(unitCells, workingGrid, candidates)) {
+      if (_eliminateNakedSubsetInUnit(unitCells, workingGrid, candidates, 2)) {
         return (technique: Technique.nakedPair, row: null, col: null); 
+      }
+    }
+    return null;
+  }
+  static TechniqueApplication? _applyNakedTriple(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final unitCells in _allUnits()) {
+      if (_eliminateNakedSubsetInUnit(unitCells, workingGrid, candidates, 3)) {
+        return (technique: Technique.nakedTriple, row: null, col: null); 
+      }
+    }
+    return null;
+  }
+  static TechniqueApplication? _applyNakedQuad(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final unitCells in _allUnits()) {
+      if (_eliminateNakedSubsetInUnit(unitCells, workingGrid, candidates, 4)) {
+        return (technique: Technique.nakedQuad, row: null, col: null); 
+      }
+    }
+    return null;
+  }
+
+// HIDDEN SUBSETS
+  static bool _eliminateHiddenSubsetInUnit(List<(int, int)> cells, List<List<int?>> workingGrid, List<List<int>> candidates, int N) {
+    Map<int, List<(int, int)>> positionMap = {};
+    for (int d = 1; d <= 9; d++) {
+      for (final (int row, int col) in cells) {
+        if (workingGrid[row][col] == null && _hasCandidate(candidates[row][col], d)) {
+          positionMap.putIfAbsent(d, () => []).add((row, col));
+        }
+      }
+    }
+
+    // Skip digits with zero or one position:
+    positionMap.removeWhere((_, positions) => positions.length <= 1);
+    List<int> digits = positionMap.keys.toList();
+
+    for (int subset = 0; subset < (1 << digits.length); subset++) { // Num of Subsets of eligible digits
+      if (_popCount(subset) == N) {
+        Set<(int, int)> unionPositions = {};
+        List<int> digitIndices = _indicesFromBitmask(subset);
+        Set<int> subsetDigits = {};
+        for (int index in digitIndices) {
+          unionPositions.addAll(positionMap[digits[index]]!);
+          subsetDigits.add(digits[index]);
+        }
+
+        bool removed = false;
+        if (unionPositions.length == N) {
+          for (int d = 1; d <= 9; d++) {
+            if (!subsetDigits.contains(d)) {
+              for (final (int row, int col) in unionPositions) {
+                if (workingGrid[row][col] == null && _hasCandidate(candidates[row][col], d)) {
+                  int oldMask = candidates[row][col];
+                  candidates[row][col] = _removeCandidate(candidates[row][col], d);
+                  if (oldMask != candidates[row][col]) removed = true;
+                }
+              }
+            }
+          }
+          if (removed) return removed;
+        }
+      }
+    }
+    return false;
+  }
+  static TechniqueApplication? _applyHiddenPair(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final unitCells in _allUnits()) {
+      if (_eliminateHiddenSubsetInUnit(unitCells, workingGrid, candidates, 2)) {
+        return (technique: Technique.hiddenPair, row: null, col: null); 
+      }
+    }
+    return null;
+  }
+  static TechniqueApplication? _applyHiddenTriple(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final unitCells in _allUnits()) {
+      if (_eliminateHiddenSubsetInUnit(unitCells, workingGrid, candidates, 3)) {
+        return (technique: Technique.hiddenTriple, row: null, col: null); 
+      }
+    }
+    return null;
+  }
+  static TechniqueApplication? _applyHiddenQuad(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final unitCells in _allUnits()) {
+      if (_eliminateHiddenSubsetInUnit(unitCells, workingGrid, candidates, 4)) {
+        return (technique: Technique.hiddenQuad, row: null, col: null); 
       }
     }
     return null;
