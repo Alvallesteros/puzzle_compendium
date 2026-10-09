@@ -60,6 +60,21 @@ class SudokuClassifier {
         usedTechniques.add(hiddenSingle);
         continue;
       }
+      final pointingPair = _applyPointingPair(workingGrid, candidateMasks);
+      if (pointingPair != null) {
+        usedTechniques.add(pointingPair);
+        continue;
+      }
+      final pointingTriple = _applyPointingTriple(workingGrid, candidateMasks);
+      if (pointingTriple != null) {
+        usedTechniques.add(pointingTriple);
+        continue;
+      }
+      final boxLineReduction = _applyBoxLineReduction(workingGrid, candidateMasks);
+      if (boxLineReduction != null) {
+        usedTechniques.add(boxLineReduction);
+        continue;
+      }
       final nakedPair = _applyNakedPair(workingGrid, candidateMasks);
       if (nakedPair != null) {
         usedTechniques.add(nakedPair);
@@ -78,6 +93,11 @@ class SudokuClassifier {
       final hiddenTriple = _applyHiddenTriple(workingGrid, candidateMasks);
       if (hiddenTriple != null) {
         usedTechniques.add(hiddenTriple);
+        continue;
+      }
+      final xWing = _applyXWing(workingGrid, candidateMasks);
+      if (xWing != null) {
+        usedTechniques.add(xWing);
         continue;
       }
       final nakedQuad = _applyNakedQuad(workingGrid, candidateMasks);
