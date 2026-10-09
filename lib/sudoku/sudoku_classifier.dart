@@ -230,7 +230,27 @@ class SudokuClassifier {
         }
       }
     }
-
+  static Iterable<List<(int, int)>> _allBoxes() sync* {
+    for (int br in [0, 3, 6]) {
+      for (int bc in [0, 3, 6]) {
+        yield [
+          for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+              (br + i, bc + j)
+        ];
+      }
+    }
+  }
+  static Iterable<List<(int, int)>> _allLines() sync* {
+      // Rows
+      for (int r = 0; r < 9; r++) {
+        yield [for (int c = 0; c < 9; c++) (r, c)];
+      }
+      // Columns
+      for (int c = 0; c < 9; c++) {
+        yield [for (int r = 0; r < 9; r++) (r, c)];
+      }
+  }
 
 // TECHNIQUES
 // FILL TECHNIQUES
@@ -315,7 +335,6 @@ class SudokuClassifier {
     }
     return false;
   }
-
   static TechniqueApplication? _applyNakedPair(List<List<int?>> workingGrid, List<List<int>> candidates) {
     for (final unitCells in _allUnits()) {
       if (_eliminateNakedSubsetInUnit(unitCells, workingGrid, candidates, 2)) {
@@ -406,6 +425,171 @@ class SudokuClassifier {
       if (_eliminateHiddenSubsetInUnit(unitCells, workingGrid, candidates, 4)) {
         return (technique: Technique.hiddenQuad, row: null, col: null); 
       }
+    }
+    return null;
+  }
+
+// POINTING SUBSETS
+  static bool _eliminatePointingInBox(List<(int, int)> boxCells, List<List<int?>> workingGrid, List<List<int>> candidates, int N) {
+      bool changes = false;
+
+      for (int d = 1; d <= 9; d++) {
+        List<(int, int)> digitPositions = [];
+        
+        for (final (int row, int col) in boxCells) {
+          if (workingGrid[row][col] == null && _hasCandidate(candidates[row][col], d) ) {
+            digitPositions.add((row, col));
+          }
+        }
+
+        if (digitPositions.length != N) {continue;} // Skip if Positions of Digit is != N
+
+        bool sameRow = digitPositions.every((p) => p.$1 == digitPositions.first.$1);
+        bool sameCol = digitPositions.every((p) => p.$2 == digitPositions.first.$2);
+
+        if (!(sameCol || sameRow)) {continue;} // Skip if candidate values not aligned
+        
+        for (int i = 0; i < 9; i++) {
+          if (sameRow && !digitPositions.contains((digitPositions.first.$1, i)) && workingGrid[digitPositions.first.$1][i] == null && _hasCandidate(candidates[digitPositions.first.$1][i], d)) {
+            int oldValue = candidates[digitPositions.first.$1][i];
+            candidates[digitPositions.first.$1][i] = _removeCandidate(candidates[digitPositions.first.$1][i], d);
+            if (oldValue != candidates[digitPositions.first.$1][i]) {changes = true;}
+          }
+          if (sameCol && !digitPositions.contains((i, digitPositions.first.$2)) && workingGrid[i][digitPositions.first.$2] == null && _hasCandidate(candidates[i][digitPositions.first.$2], d)) {
+            int oldValue = candidates[i][digitPositions.first.$2];
+            candidates[i][digitPositions.first.$2] = _removeCandidate(candidates[i][digitPositions.first.$2], d);
+            if (oldValue != candidates[i][digitPositions.first.$2]) {changes = true;}
+          }
+        }
+        if ( changes ) return changes;
+      }
+      return false;
+    }
+  static TechniqueApplication? _applyPointingPair(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final box in _allBoxes()) {
+      if (_eliminatePointingInBox(box, workingGrid, candidates, 2)) {
+        return (technique: Technique.pointingPair, row: null, col: null);
+      }
+    }
+    return null;
+  }
+  static TechniqueApplication? _applyPointingTriple(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final box in _allBoxes()) {
+      if (_eliminatePointingInBox(box, workingGrid, candidates, 3)) {
+        return (technique: Technique.pointingTriple, row: null, col: null);
+      }
+    }
+    return null;
+  }
+
+// BOX-LINE REDUCTION
+  static bool _eliminateBoxLineReductionInLine(List<(int, int)> lineCells, List<List<int?>> workingGrid, List<List<int>> candidates) {
+    bool changes = false;
+
+    for (int d = 1; d <= 9; d++) {
+      List<(int, int)> digitPositions = [];
+      for (final (int row, int col) in lineCells) {
+        if (workingGrid[row][col] == null && _hasCandidate(candidates[row][col], d)) {
+          digitPositions.add((row, col));
+        }
+      }
+      if (digitPositions.length < 2) continue;
+
+      bool sameBox = digitPositions.every((p) => (p.$1 ~/3 * 3 == digitPositions.first.$1 ~/3 * 3) && (p.$2 ~/3 * 3 == digitPositions.first.$2 ~/3 * 3));
+      if (!sameBox) continue;
+
+      (int, int) boxOrigin = (digitPositions.first.$1 ~/3 * 3, digitPositions.first.$2 ~/3 * 3);
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          int r = boxOrigin.$1 + i;
+          int c = boxOrigin.$2 + j;
+
+          if (lineCells.contains((r, c))) continue;
+          if (workingGrid[r][c] == null && _hasCandidate(candidates[r][c], d)) {
+            int oldValue = candidates[r][c];
+            candidates[r][c] = _removeCandidate(candidates[r][c], d);
+            if (oldValue != candidates[r][c]) {changes = true;}
+          }
+        }
+      }
+
+      if (changes) return changes;
+    }
+    return false;
+  }
+  static TechniqueApplication? _applyBoxLineReduction(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (final line in _allLines()) {
+      if (_eliminateBoxLineReductionInLine(line, workingGrid, candidates)) {
+        return (technique: Technique.boxLineReduction, row: null, col: null);
+      }
+    }
+    return null;
+  }
+
+// FISH AND WING TECHNIQUES
+  static Iterable<List<int>> _indicesCombination({required int n, required int size, int start = 0}) sync* {
+    if (size == 0) {
+      yield [];
+      return;
+    }
+
+    for (int i = start; i <= n - size; i++) {
+      for (final combination in _indicesCombination(
+        n: n,
+        size: size - 1,
+        start: i + 1,
+      )) {
+        yield [i, ...combination];
+      }
+    }
+  }
+  static bool _fishInOrientation(List<List<int?>> workingGrid, List<List<int>> candidates, int N, bool primaryIsRow) {
+    bool changes = false;
+    (int, int) cellFor(int primary, int secondary) {
+      return primaryIsRow ? (primary, secondary) : (secondary, primary);
+    }
+
+    Iterable<List<int>> primaryUnitIndices = _indicesCombination(n: 9, size: N);
+    for ( final primaryIndices in primaryUnitIndices) {
+      Digit:
+      for ( int d = 1; d <= 9; d++ ) {
+        Set<int> unionPos = {};
+        for ( final primaryIndex in primaryIndices) {
+          Set<int> setPos = {};
+          for ( int secondaryIndex = 0; secondaryIndex < 9; secondaryIndex++) {
+            (int, int) cell = cellFor(primaryIndex, secondaryIndex);
+            if (workingGrid[cell.$1][cell.$2] == null && _hasCandidate(candidates[cell.$1][cell.$2], d)) {
+              setPos.add(secondaryIndex);
+            }
+          }
+          if (setPos.isEmpty) continue Digit;
+          unionPos.addAll(setPos);
+        }
+        if (unionPos.length != N) continue Digit;
+
+        for (final s in unionPos) {
+          for (int p = 0; p < 9; p++) {
+            (int, int) c = cellFor(p, s);
+            if (primaryIndices.contains(p)) continue;
+            if (workingGrid[c.$1][c.$2] == null && _hasCandidate(candidates[c.$1][c.$2], d)) {
+              int oldValue = candidates[c.$1][c.$2];
+              candidates[c.$1][c.$2] = _removeCandidate(candidates[c.$1][c.$2], d);
+              if (oldValue != candidates[c.$1][c.$2]) {changes = true;}
+            }
+          }
+        }
+        if (changes) return true;
+      }
+    }
+    return false;
+  }
+  static bool _applyFish(List<List<int?>> workingGrid, List<List<int>> candidates, N) {
+    if (_fishInOrientation(workingGrid, candidates, N, true)) return true;
+    return _fishInOrientation(workingGrid, candidates, N, false);
+  }
+  static TechniqueApplication? _applyXWing(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    if (_applyFish(workingGrid, candidates, 2)) {
+      return (technique: Technique.xWing, row: null, col: null);
     }
     return null;
   }
