@@ -12,7 +12,11 @@ enum Technique {
   pointingPair,
   pointingTriple,
   boxLineReduction,
-  xWing;
+  xWing,
+  uniqueRectangle,
+  swordfish,
+  singlesChain,
+  yWing;
 
   int get rank => switch (this) {
     // Tier 1: Easy
@@ -23,17 +27,19 @@ enum Technique {
     Technique.pointingPair      => 3,
     Technique.pointingTriple    => 4,
     Technique.boxLineReduction  => 5,
-
-    // Tier 3: Medium-Hard
     Technique.nakedPair         => 6,
     Technique.hiddenPair        => 7,
 
     // Tier 4: Hard
     Technique.nakedTriple       => 8,
     Technique.hiddenTriple      => 9,
-    Technique.xWing            => 10,
-    Technique.nakedQuad        => 11,
-    Technique.hiddenQuad       => 12,
+    Technique.uniqueRectangle   => 10,
+    Technique.nakedQuad         => 11,
+    Technique.xWing             => 12,
+    Technique.swordfish         => 13,
+    Technique.hiddenQuad        => 14,
+    Technique.singlesChain      => 15,
+    Technique.yWing             => 16,
   };
 }
 
@@ -95,14 +101,19 @@ class SudokuClassifier {
         usedTechniques.add(hiddenTriple);
         continue;
       }
+      final nakedQuad = _applyNakedQuad(workingGrid, candidateMasks);
+      if (nakedQuad != null) {
+        usedTechniques.add(nakedQuad);
+        continue;
+      }
       final xWing = _applyXWing(workingGrid, candidateMasks);
       if (xWing != null) {
         usedTechniques.add(xWing);
         continue;
       }
-      final nakedQuad = _applyNakedQuad(workingGrid, candidateMasks);
-      if (nakedQuad != null) {
-        usedTechniques.add(nakedQuad);
+      final swordfish = _applySwordfish(workingGrid, candidateMasks);
+      if (swordfish != null) {
+        usedTechniques.add(swordfish);
         continue;
       }
       final hiddenQuad = _applyHiddenQuad(workingGrid, candidateMasks);
@@ -610,6 +621,12 @@ class SudokuClassifier {
   static TechniqueApplication? _applyXWing(List<List<int?>> workingGrid, List<List<int>> candidates) {
     if (_applyFish(workingGrid, candidates, 2)) {
       return (technique: Technique.xWing, row: null, col: null);
+    }
+    return null;
+  }
+  static TechniqueApplication? _applySwordfish(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    if (_applyFish(workingGrid, candidates, 3)) {
+      return (technique: Technique.swordfish, row: null, col: null);
     }
     return null;
   }
