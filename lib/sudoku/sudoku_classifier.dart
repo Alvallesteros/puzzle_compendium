@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
 
 enum Technique {
@@ -108,6 +109,11 @@ class SudokuClassifier {
         usedTechniques.add(hiddenTriple);
         continue;
       }
+      final uniqueRectangle = _applyUniqueRectangle(workingGrid, candidateMasks);
+      if (uniqueRectangle != null) {
+        usedTechniques.add(uniqueRectangle);
+        continue;
+      }
       final nakedQuad = _applyNakedQuad(workingGrid, candidateMasks);
       if (nakedQuad != null) {
         usedTechniques.add(nakedQuad);
@@ -126,6 +132,11 @@ class SudokuClassifier {
       final hiddenQuad = _applyHiddenQuad(workingGrid, candidateMasks);
       if (hiddenQuad != null) {
         usedTechniques.add(hiddenQuad);
+        continue;
+      }
+      final singlesChain = _applySinglesChain(workingGrid, candidateMasks);
+      if (singlesChain != null) {
+        usedTechniques.add(singlesChain);
         continue;
       }
       final yWing = _applyYWing(workingGrid, candidateMasks);
@@ -626,7 +637,7 @@ class SudokuClassifier {
     }
     return false;
   }
-  static bool _applyFish(List<List<int?>> workingGrid, List<List<int>> candidates, N) {
+  static bool _applyFish(List<List<int?>> workingGrid, List<List<int>> candidates, int N) {
     if (_fishInOrientation(workingGrid, candidates, N, true)) return true;
     return _fishInOrientation(workingGrid, candidates, N, false);
   }
@@ -681,6 +692,165 @@ class SudokuClassifier {
         }
       }
     } 
+    return null;
+  }
+// SINGLES CHAIN
+  static TechniqueApplication? _applySinglesChain(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for (int digit = 1; digit <= 9; digit++) {
+      Set<(int, int)> candidateSet = {};
+      for (int i = 0; i < 9; i++) {
+        for (int j = 0; j < 9; j++) {
+          if (workingGrid[i][j] == null && _hasCandidate(candidates[i][j], digit)) {
+            candidateSet.add((i, j));
+          }
+        }
+      }
+      
+      if (candidateSet.length < 2) continue;
+
+      Map<(int, int), Set<(int,int)>> conjugatePairGraph = {};
+      for (final unit in _allUnits()) {
+        List<(int, int)> candidateCells = [];
+        for (final cell in unit) {
+          if (workingGrid[cell.$1][cell.$2] == null && _hasCandidate(candidates[cell.$1][cell.$2], digit)) {
+            candidateCells.add(cell);
+          }
+        }
+
+        if (candidateCells.length == 2) {
+          for (final cell in candidateCells) {
+            conjugatePairGraph.putIfAbsent(cell, () => <(int,int)>{}).addAll(candidateCells.where((c) => c != cell));
+          }
+        }
+      }
+
+      Map<(int, int), int> colorMap = {}; // 0 = A, 1 = B — shared across all components
+      List<(Set<(int, int)>, Set<(int, int)>)> components = [];
+
+      for (final candidate in candidateSet) {
+        if (colorMap.keys.contains(candidate)) continue;
+
+        ListQueue<(int, int)> queue = ListQueue<(int, int)>()..add(candidate);
+        colorMap.putIfAbsent(candidate, () => 0);
+        Set<(int, int)> colorA = {candidate};
+        Set<(int, int)> colorB = {}; 
+        bool oddCycle = false;
+
+        while (queue.isNotEmpty) {
+          (int, int) node = queue.removeFirst();
+          int nodeColor = colorMap[node]!;
+
+          for (final nextNode in conjugatePairGraph[node] ?? const <(int, int)>{}) {
+            if (!colorMap.keys.contains(nextNode)) {
+              colorMap.putIfAbsent(nextNode, () => 1 - nodeColor);
+              (nodeColor == 0 ? colorB : colorA).add(nextNode);
+              queue.add(nextNode);
+            } else if (colorMap[nextNode] == nodeColor) {
+              oddCycle = true;
+              break;
+            }
+          }
+        }
+
+        if (oddCycle) continue;
+        if (colorA.length + colorB.length < 2) continue;
+        components.add((colorA, colorB));
+      }
+
+      bool changes = false;
+      for ( final (colorA, colorB) in components) {
+        // RULE 1
+        for (final cell in colorA) {
+          if (_peersOf(cell).any((peer) => colorA.contains(peer))) {
+            for (final (row, col) in colorA) {
+              int oldValue = candidates[row][col];
+              candidates[row][col] = _removeCandidate(candidates[row][col], digit);
+              if (oldValue != candidates[row][col]) {
+                _recordElimination(Technique.singlesChain, row, col, digit);
+                changes = true;
+              }
+            }
+            if (changes) {return (technique: Technique.singlesChain, row: null, col: null);}
+          }
+        }
+
+
+        for (final cell in colorB) {
+          if (_peersOf(cell).any((peer) => colorB.contains(peer))) {
+            for (final (row, col) in colorB) {
+              int oldValue = candidates[row][col];
+              candidates[row][col] = _removeCandidate(candidates[row][col], digit);
+              if (oldValue != candidates[row][col]) {
+                _recordElimination(Technique.singlesChain, row, col, digit);
+                changes = true;
+              }
+            }
+            if (changes) {return (technique: Technique.singlesChain, row: null, col: null);}
+          }
+        }
+
+        //RULE 2
+        for (final (row, col) in candidateSet.where((cell) => !colorA.contains(cell) && !colorB.contains(cell))) {
+          if (_hasCandidate(candidates[row][col], digit) && _peersOf((row, col)).any((peer) => colorA.contains(peer)) && _peersOf((row, col)).any((peer) => colorB.contains(peer))) {
+            int oldValue = candidates[row][col];
+            candidates[row][col] = _removeCandidate(candidates[row][col], digit);
+            if (oldValue != candidates[row][col]) {
+              _recordElimination(Technique.singlesChain, row, col, digit);
+              return (technique: Technique.singlesChain, row: null, col: null);
+            }
+          }          
+        }
+      }
+    }
+    return null;
+  }
+// UNIQUE RECTANGLE
+  static TechniqueApplication? _applyUniqueRectangle(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    List<List<int>> rowPairs = _indicesCombination(n: 9, size: 2).toList();
+    List<List<int>> colPairs = _indicesCombination(n: 9, size: 2).toList();
+
+    for (final rowPair in rowPairs) {
+      NextColPair:
+      for (final colPair in colPairs) {
+        var (r1, r2, c1, c2) = (rowPair[0], rowPair[1], colPair[0], colPair[1]);
+        bool sameBand = r1 ~/3 * 3 == r2 ~/3 * 3;
+        bool sameStack = c1 ~/3 * 3 == c2 ~/3 * 3;
+        
+        if (!(sameBand ^ sameStack)) continue;
+
+
+        int? digitCandidates;
+        (int, int)? roof;
+        for (final row in [r1, r2]) {
+          for (final col in [c1, c2]) {
+            if (workingGrid[row][col] != null)  continue NextColPair;
+            if (_popCount(candidates[row][col]) < 2) continue NextColPair; 
+            if (_popCount(candidates[row][col]) > 2) {
+              if (roof == null) {
+                 roof = (row, col);
+              }
+              else {continue NextColPair;}
+            }
+            digitCandidates ??= candidates[row][col];
+            digitCandidates &= candidates[row][col];
+          }
+        }
+
+        if (_popCount(digitCandidates!) != 2) continue;
+        if (roof == null) continue;
+
+        bool changes = false;
+        for (final digit in _candidatesOf(digitCandidates)) {
+          int oldValue = candidates[roof.$1][roof.$2];
+          candidates[roof.$1][roof.$2] = _removeCandidate(candidates[roof.$1][roof.$2], digit);
+          if (oldValue != candidates[roof.$1][roof.$2]) {
+            _recordElimination(Technique.uniqueRectangle, roof.$1, roof.$2, digit);
+            changes = true;
+          }
+        }
+        if (changes) {return (technique: Technique.uniqueRectangle, row: null, col: null);}
+      }
+    }
     return null;
   }
 }

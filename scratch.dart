@@ -1,166 +1,131 @@
 // tool/scratch.dart
-//
-// Step 6 verification — Y-Wing, with soundness.
-//
-// Part A: structural — Y-Wing fires on seed 2, records eliminations
-//         with null coords, classifies deterministically.
-//
-// Part B: soundness — for a set of Y-Wing-hardest fixtures, capture
-//         every Y-Wing elimination via the debug hook, and check
-//         that the removed digit is NOT the solution value at the
-//         removed cell. Zero violations = sound on this fixture set.
-
 import 'package:puzzle_arcade/sudoku/given_count_difficulty.dart';
 import 'package:puzzle_arcade/sudoku/generated_puzzle.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_classifier.dart';
 import 'package:puzzle_arcade/sudoku/sudoku_generator.dart';
 
-void main() {
-  print('=============================================');
-  print('Step 6 verification — Y-Wing');
-  print('=============================================');
-  print('');
-  _partA(seed: 2, target: 25);
-  print('');
-  _partB(target: 25, seeds: _fixtureSeeds);
-}
+const int kPuzzleCount = 1000;
+const int kTarget = 25;
 
-const List<int> _fixtureSeeds = [
-  2, 6, 9, 30, 71, 105, 128, 133, 158, 171,
-  195, 204, 210, 238, 241, 268, 297, 298, 304, 308,
+const List<Technique> kCheckSoundness = [
+  Technique.swordfish,
+  Technique.yWing,
+  Technique.singlesChain,
+  Technique.uniqueRectangle,
 ];
 
-// ---------------------------------------------------------------- Part A
-
-void _partA({required int seed, required int target}) {
-  print('--- Part A: Structural (seed $seed, target $target) ---');
-  print('');
-
-  final generated = SudokuGenerator.generate(
-    seed,
-    GivenCountDifficulty(targetGivens: target),
-  );
-
-  SudokuClassifier.debugCapture = [];
-  final r1 = SudokuClassifier.classify(generated.puzzle);
-  final captures1 = List<ClassifierElimination>.from(
-    SudokuClassifier.debugCapture!,
-  );
-  SudokuClassifier.debugCapture = null;
-
-  final r2 = SudokuClassifier.classify(generated.puzzle);
-
-  int yWingInPath = 0;
-  bool allNullCoords = true;
-  for (final app in r1.path) {
-    if (app.technique == Technique.yWing) {
-      yWingInPath++;
-      if (app.row != null || app.col != null) allNullCoords = false;
-    }
-  }
-  final yWingCaptured =
-      captures1.where((e) => e.technique == Technique.yWing).length;
-
-  final deterministic = r1.path.length == r2.path.length &&
-      r1.hardest == r2.hardest &&
-      r1.solved == r2.solved;
-
-  print('solved:                       ${r1.solved}');
-  print('hardest:                      ${r1.hardest?.name} '
-        '(rank ${r1.hardest?.rank})');
-  print('pathLen:                      ${r1.path.length}');
-  print('yWing entries in path:        $yWingInPath');
-  print('yWing entries captured:       $yWingCaptured');
-  print('all yWing coords null:        $allNullCoords');
-  print('deterministic:                $deterministic');
-  print('');
-  print('path:');
-  for (final app in r1.path) {
-    final coord = app.row != null ? '(${app.row},${app.col})' : 'elimination';
-    print('  ${app.technique.name.padRight(20)} $coord');
-  }
-
-  print('');
-  final pass = r1.hardest == Technique.yWing &&
-      yWingInPath > 0 &&
-      yWingCaptured == yWingInPath &&
-      allNullCoords &&
-      deterministic;
-  print(pass ? 'Part A: PASS' : 'Part A: FAIL');
-}
-
-// ---------------------------------------------------------------- Part B
-
-void _partB({required int target, required List<int> seeds}) {
-  print('--- Part B: Soundness (${seeds.length} fixtures, target $target) ---');
-  print('');
-
-  int fixturesWithYWing = 0;
-  int totalEliminations = 0;
-  int violations = 0;
-  int? firstViolationSeed;
-  int? firstViolationRow;
-  int? firstViolationCol;
-  int? firstViolationDigit;
+void main() {
+  final occurrences = <Technique, int>{for (final t in Technique.values) t: 0};
+  final hardest = <Technique, int>{for (final t in Technique.values) t: 0};
+  final seedsByTechnique = <Technique, List<int>>{
+    for (final t in Technique.values) t: [],
+  };
+  int solved = 0;
 
   final sw = Stopwatch()..start();
 
-  for (final seed in seeds) {
+  for (int seed = 0; seed < kPuzzleCount; seed++) {
     final generated = SudokuGenerator.generate(
       seed,
-      GivenCountDifficulty(targetGivens: target),
+      GivenCountDifficulty(targetGivens: kTarget),
     );
-    final solution = generated.solution;
+    final r = SudokuClassifier.classify(generated.puzzle);
 
-    SudokuClassifier.debugCapture = [];
-    SudokuClassifier.classify(generated.puzzle);
-    final captures = List<ClassifierElimination>.from(
-      SudokuClassifier.debugCapture!,
-    );
-    SudokuClassifier.debugCapture = null;
+    if (r.solved) solved++;
+    for (final app in r.path) {
+      occurrences[app.technique] = occurrences[app.technique]! + 1;
+    }
+    final h = r.hardest;
+    if (h != null) {
+      hardest[h] = hardest[h]! + 1;
+      seedsByTechnique[h]!.add(seed);
+    }
 
-    final yWingCaptures =
-        captures.where((e) => e.technique == Technique.yWing).toList();
-
-    if (yWingCaptures.isNotEmpty) fixturesWithYWing++;
-
-    for (final e in yWingCaptures) {
-      totalEliminations++;
-      final solutionValue = solution[e.row][e.col];
-      if (solutionValue == e.digit) {
-        violations++;
-        if (firstViolationSeed == null) {
-          firstViolationSeed = seed;
-          firstViolationRow = e.row;
-          firstViolationCol = e.col;
-          firstViolationDigit = e.digit;
-        }
-      }
+    if ((seed + 1) % 250 == 0) {
+      print('  ... ${seed + 1} / $kPuzzleCount  '
+            '(${sw.elapsedMilliseconds} ms)');
     }
   }
 
   sw.stop();
 
-  print('fixtures scanned:             ${seeds.length}');
-  print('fixtures with Y-Wing fires:   $fixturesWithYWing');
-  print('total Y-Wing eliminations:    $totalEliminations');
-  print('soundness violations:         $violations');
-  print('elapsed:                      ${sw.elapsedMilliseconds} ms');
-  if (violations > 0) {
-    print('');
-    print('First violation:');
-    print('  seed:    $firstViolationSeed');
-    print('  cell:    ($firstViolationRow, $firstViolationCol)');
-    print('  digit:   $firstViolationDigit (this IS the solution value)');
-  }
+  print('');
+  print('=== Sweep complete ===');
+  print('solved:  $solved / $kPuzzleCount  '
+        '(${(solved / kPuzzleCount * 100).toStringAsFixed(2)}%)');
+  print('elapsed: ${sw.elapsedMilliseconds} ms');
+
+  _table('Occurrences', occurrences, kPuzzleCount);
+  _table('Hardest', hardest, kPuzzleCount);
 
   print('');
-  if (violations == 0 && totalEliminations > 0) {
-    print('Part B: PASS — $totalEliminations eliminations, 0 violations');
-  } else if (totalEliminations == 0) {
-    print('Part B: INCONCLUSIVE — no Y-Wing eliminations captured. '
-          'Debug hook likely not wired.');
-  } else {
-    print('Part B: FAIL — $violations soundness violations');
+  print('=== Fixture seeds ===');
+  for (final t in [Technique.nakedQuad, Technique.hiddenQuad, ...kCheckSoundness]) {
+    final seeds = seedsByTechnique[t]!;
+    print('  ${t.name.padRight(20)} ${seeds.length}  '
+          '${seeds.take(20).join(', ')}${seeds.length > 20 ? ', ...' : ''}');
+  }
+
+  // ---- Batch soundness across 8c techniques ----
+  print('');
+  print('=== Soundness check ===');
+  int totalChecked = 0;
+  int totalViolations = 0;
+  final sw2 = Stopwatch()..start();
+
+  for (final technique in kCheckSoundness) {
+    final seeds = seedsByTechnique[technique]!;
+    int techChecked = 0;
+    int techViolations = 0;
+    for (final seed in seeds) {
+      final generated = SudokuGenerator.generate(
+        seed,
+        GivenCountDifficulty(targetGivens: kTarget),
+      );
+      final solution = generated.solution;
+      SudokuClassifier.debugCapture = [];
+      SudokuClassifier.classify(generated.puzzle);
+      final captures = List<ClassifierElimination>.from(
+        SudokuClassifier.debugCapture!,
+      );
+      SudokuClassifier.debugCapture = null;
+      for (final e in captures) {
+        if (e.technique != technique) continue;
+        techChecked++;
+        if (solution[e.row][e.col] == e.digit) techViolations++;
+      }
+    }
+    totalChecked += techChecked;
+    totalViolations += techViolations;
+    print('  ${technique.name.padRight(20)} '
+          '$techChecked eliminations, $techViolations violations');
+  }
+
+  sw2.stop();
+
+  print('');
+  print('total eliminations checked: $totalChecked');
+  print('total violations:           $totalViolations');
+  print('elapsed:                    ${sw2.elapsedMilliseconds} ms');
+  print('');
+  print(totalViolations == 0
+      ? 'PASS — $totalChecked eliminations, 0 violations'
+      : 'FAIL — $totalViolations violations');
+}
+
+void _table(String title, Map<Technique, int> counts, int total) {
+  print('');
+  print('--- $title ---');
+  final entries = counts.entries.where((e) => e.value > 0).toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  print('  ${'technique'.padRight(20)}'
+        '${'count'.padLeft(10)}'
+        '${'pct'.padLeft(12)}');
+  print('  ${'-' * 20}${'-' * 10}${'-' * 12}');
+  for (final e in entries) {
+    final pct = e.value / total * 100;
+    print('  ${e.key.name.padRight(20)}'
+          '${e.value.toString().padLeft(10)}'
+          '${'${pct.toStringAsFixed(4)}%'.padLeft(12)}');
   }
 }
