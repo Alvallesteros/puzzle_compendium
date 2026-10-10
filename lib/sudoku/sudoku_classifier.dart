@@ -628,7 +628,10 @@ class SudokuClassifier {
             if (workingGrid[c.$1][c.$2] == null && _hasCandidate(candidates[c.$1][c.$2], d)) {
               int oldValue = candidates[c.$1][c.$2];
               candidates[c.$1][c.$2] = _removeCandidate(candidates[c.$1][c.$2], d);
-              if (oldValue != candidates[c.$1][c.$2]) {changes = true;}
+              if (oldValue != candidates[c.$1][c.$2]) {
+                _recordElimination(N == 2 ? Technique.xWing : Technique.swordfish, c.$1, c.$2, d);
+                changes = true;
+              }
             }
           }
         }
