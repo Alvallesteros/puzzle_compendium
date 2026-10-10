@@ -43,17 +43,24 @@ enum Technique {
   };
 }
 
+typedef ClassifierElimination = ({Technique technique, int row, int col, int digit});
 typedef TechniqueApplication = ({Technique technique, int? row, int? col});
 typedef SudokuClassification = ({bool solved, Technique? hardest, List<TechniqueApplication> path});
 
 class SudokuClassifier {
+  static List<ClassifierElimination>? debugCapture;
   const SudokuClassifier._();
+
+  static void _recordElimination(Technique technique, int row, int col, int digit) {
+    debugCapture?.add((technique: technique, row: row, col: col, digit: digit));
+  }
 
   static SudokuClassification classify(SudokuPuzzle puzzle) {
     //Build a 9x9 copy of the puzzle
     List<List<int?>> workingGrid = puzzle.grid.map((row) => List<int?>.from(row)).toList();
     List<List<int>> candidateMasks = _buildCandidates(workingGrid);
     List<TechniqueApplication> usedTechniques = [];
+    
 
     while(!_isSolved(workingGrid)) {
       final nakedSingle = _applyNakedSingle(workingGrid, candidateMasks);
@@ -119,6 +126,11 @@ class SudokuClassifier {
       final hiddenQuad = _applyHiddenQuad(workingGrid, candidateMasks);
       if (hiddenQuad != null) {
         usedTechniques.add(hiddenQuad);
+        continue;
+      }
+      final yWing = _applyYWing(workingGrid, candidateMasks);
+      if (yWing != null) {
+        usedTechniques.add(yWing);
         continue;
       }
       break;
@@ -628,6 +640,47 @@ class SudokuClassifier {
     if (_applyFish(workingGrid, candidates, 3)) {
       return (technique: Technique.swordfish, row: null, col: null);
     }
+    return null;
+  }
+
+// ADVANCED TECHNIQUES
+// Y-WING
+  static TechniqueApplication? _applyYWing(List<List<int?>> workingGrid, List<List<int>> candidates) {
+    for ( int row = 0; row < 9; row++ ) {
+      for ( int col = 0; col < 9; col++ ) {
+        if ( workingGrid[row][col] == null && _popCount(candidates[row][col])== 2 ) {
+          (int, int) pivot = (row, col);
+          Set<(int, int)> peers = _peersOf(pivot).where((cell) => workingGrid[cell.$1][cell.$2] == null && _popCount(candidates[cell.$1][cell.$2]) == 2 ).toSet();
+          for ( final wingOne in peers.where((cell) => 
+            //To have 1 shared digit ab & xc should yield a popcount of 1 if x is either a or b ( 1 being c )
+            _popCount(candidates[cell.$1][cell.$2] & candidates[pivot.$1][pivot.$2]) == 1
+          )) {
+            for ( final wingTwo in peers.where((cell) =>
+              cell != wingOne &&
+              candidates[pivot.$1][pivot.$2] & candidates[wingOne.$1][wingOne.$2] != candidates[pivot.$1][pivot.$2] & candidates[cell.$1][cell.$2] &&
+              _popCount(candidates[cell.$1][cell.$2] & candidates[pivot.$1][pivot.$2]) == 1 &&
+              _popCount(candidates[cell.$1][cell.$2] & candidates[wingOne.$1][wingOne.$2]) == 1
+            )) {
+              int c = _candidatesOf(candidates[wingOne.$1][wingOne.$2] & candidates[wingTwo.$1][wingTwo.$2]).first;
+              
+              Set<(int, int)> peersWingTwo = _peersOf(wingTwo);
+              for (final intersection in _peersOf(wingOne).where((cell) => 
+                peersWingTwo.contains(cell)
+              )) {
+                if (workingGrid[intersection.$1][intersection.$2] == null && _hasCandidate(candidates[intersection.$1][intersection.$2], c)) {
+                  int oldValue = candidates[intersection.$1][intersection.$2];
+                  candidates[intersection.$1][intersection.$2] = _removeCandidate(candidates[intersection.$1][intersection.$2], c);
+                  if (oldValue != candidates[intersection.$1][intersection.$2]) {
+                    _recordElimination(Technique.yWing, intersection.$1, intersection.$2, c);
+                    return (technique: Technique.yWing, col: null, row: null);
+                  } 
+                }
+              }
+            }
+          }
+        }
+      }
+    } 
     return null;
   }
 }
