@@ -6,6 +6,9 @@ import 'package:puzzle_arcade/sudoku/algorithm/sudoku_generator.dart';
 import 'package:puzzle_arcade/sudoku/difficulty/given_count_difficulty.dart';
 import 'package:puzzle_arcade/sudoku/model/generated_puzzle.dart';
 import 'package:puzzle_arcade/env.dart';
+import 'package:puzzle_arcade/sudoku/widgets/input_mode_toggle.dart';
+
+enum InputMode {value, notes}
 
 class SudokuSession extends StatefulWidget {
   const SudokuSession({super.key});
@@ -17,6 +20,7 @@ class SudokuSession extends StatefulWidget {
 class _SudokuSessionState extends State<SudokuSession>{
   final GeneratedPuzzle generated = SudokuGenerator.generate(currentSeed(), GivenCountDifficulty(targetGivens: 79));
   (int, int)? selectedCell;
+  InputMode inputMode = InputMode.value;
   final Map<(int, int), int> enteredValues = {};
   final Map<(int, int), Set<int>> notes = {};
 
@@ -70,16 +74,14 @@ class _SudokuSessionState extends State<SudokuSession>{
   }
 
   void _enterDigit(int digit) {
-    if (selectedCell == null) {
-      return;
-    }
-    final (row, col) = selectedCell!;
-    if (generated.puzzle.isGiven(row, col)) {
-      return;
-    }
+    if (inputMode == InputMode.notes) return _toggleNote(digit);
+    if (selectedCell == null) return;
+  
+    final cell = selectedCell!;
+    if (generated.puzzle.isGiven(cell.$1, cell.$2)) return;
     setState(() {
-      enteredValues[(row, col)] = digit;
-      _stripPeerNotes((row, col), digit);
+      enteredValues[cell] = digit;
+      _stripPeerNotes(cell, digit);
     });
 
     final result = findConflicts(generated.puzzle, enteredValues);
@@ -101,18 +103,16 @@ class _SudokuSessionState extends State<SudokuSession>{
   }
 
   void _eraseSelected() {
-    if (selectedCell == null) {
-      return;
-    }
-    final (row, col) = selectedCell!;
-    if (generated.puzzle.isGiven(row, col)) {
-      return;
-    }
-    if (!enteredValues.containsKey(selectedCell)) {
-      return;
-    }
+    if (selectedCell == null) return;
+
+    final cell = selectedCell!;
+    if (generated.puzzle.isGiven(cell.$1, cell.$2)) return;
     setState(() {
-      enteredValues.remove(selectedCell);
+      if (enteredValues.containsKey(cell)) {
+          enteredValues.remove(cell);
+      } else if (notes.containsKey(cell)) {
+          notes.remove(cell);
+      }
     });
   }
 
@@ -124,6 +124,37 @@ class _SudokuSessionState extends State<SudokuSession>{
       }
       if (notes[peer]!.isEmpty) notes.remove(peer);
     }
+  }
+
+  void _toggleNote(int digit) {
+    if (selectedCell == null) return;
+    if (generated.puzzle.isGiven(selectedCell!.$1, selectedCell!.$2)) return;
+    if (enteredValues.containsKey(selectedCell)) return;
+    final cell = selectedCell!;
+    setState(() {
+      if (notes.containsKey(cell)) {
+        if (notes[cell]!.contains(digit)) {
+          notes[cell]!.remove(digit);
+          if (notes[cell]!.isEmpty) {
+            notes.remove(cell);
+          }
+        } else {
+          notes[cell]!.add(digit);
+        }
+      } else {
+        notes[cell] = <int>{};
+        notes[cell]!.add(digit);
+      }
+    });
+  }
+
+  void _toggleInputMode() {
+    setState(() {
+      inputMode = switch (inputMode) {
+        InputMode.value => InputMode.notes,
+        InputMode.notes => InputMode.value,
+      };
+    });
   }
 
   @override
@@ -173,6 +204,11 @@ class _SudokuSessionState extends State<SudokuSession>{
               )
             )
           ),
+      // TOGGLE BUTTON ========================
+        InputModeToggle(
+          inputMode: inputMode,
+          onToggle: _toggleInputMode,
+        ),
       // NUM PAD ==============================
         NumberPad(
           onDigit: _enterDigit,
