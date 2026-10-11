@@ -1,4 +1,4 @@
-import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
+import 'package:puzzle_arcade/sudoku/model/sudoku_puzzle.dart';
 
 int? _valueAt(SudokuPuzzle puzzle, Map<(int, int), int> enteredValues, int row, int col) {
   (int, int) key = (row, col);

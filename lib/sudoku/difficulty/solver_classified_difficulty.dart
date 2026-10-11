@@ -1,6 +1,6 @@
-import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_difficulty.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_classifier.dart';
+import 'package:puzzle_arcade/sudoku/model/sudoku_puzzle.dart';
+import 'package:puzzle_arcade/sudoku/difficulty/sudoku_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/algorithm/sudoku_classifier.dart';
 
 class SolverClassifiedDifficulty implements SudokuDifficulty {
   final Technique min;

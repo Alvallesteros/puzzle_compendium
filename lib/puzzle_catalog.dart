@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 enum PuzzleType {
-  Sudoku,
-  Shikaku,
-  Queens,
+  sudoku,
+  shikaku,
+  queens,
 }
 
 
@@ -22,21 +22,21 @@ class PuzzleDefinition {
 }
 
 final PuzzleDefinition sudokuDefinition = PuzzleDefinition(
-  identity: PuzzleType.Sudoku,
+  identity: PuzzleType.sudoku,
   displayName: 'Sudoku',
   descriptor: 'A logic-based number placement puzzle.',
   color: const Color.fromARGB(255, 210, 210, 255),
 );
 
 final PuzzleDefinition shikakuDefinition = PuzzleDefinition(
-  identity: PuzzleType.Shikaku,
+  identity: PuzzleType.shikaku,
   displayName: 'Shikaku',
   descriptor: 'Divide the Grid into Rectangles.',
   color: const Color.fromARGB(255, 217, 255, 217),
 );
 
 final PuzzleDefinition queensDefinition = PuzzleDefinition(
-  identity: PuzzleType.Queens,
+  identity: PuzzleType.queens,
   displayName: 'Queens',
   descriptor: 'Place Queens on a NxN Grid',
   color: const Color.fromARGB(255, 246, 216, 246),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:puzzle_arcade/puzzle_catalog.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_session.dart';
+import 'package:puzzle_arcade/widgets/sudoku_session.dart';
 
 class PuzzleScreen extends StatelessWidget {
   const PuzzleScreen({super.key, required this.puzzle});
@@ -36,9 +36,9 @@ class PuzzleArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (puzzle.identity) {
-      PuzzleType.Sudoku => const SudokuSession(),
-      PuzzleType.Shikaku => PlaceholderBody(puzzle: puzzle),
-      PuzzleType.Queens => PlaceholderBody(puzzle: puzzle),   
+      PuzzleType.sudoku => const SudokuSession(),
+      PuzzleType.shikaku => PlaceholderBody(puzzle: puzzle),
+      PuzzleType.queens => PlaceholderBody(puzzle: puzzle),   
     };
   }
 }

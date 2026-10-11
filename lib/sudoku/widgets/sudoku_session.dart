@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_cell.dart';
-import 'package:puzzle_arcade/sudoku/num_pad.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_validator.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_generator.dart';
-import 'package:puzzle_arcade/sudoku/given_count_difficulty.dart';
-import 'package:puzzle_arcade/sudoku/generated_puzzle.dart';
+import 'package:puzzle_arcade/widgets/sudoku_cell.dart';
+import 'package:puzzle_arcade/widgets/num_pad.dart';
+import 'package:puzzle_arcade/sudoku/algorithm/sudoku_validator.dart';
+import 'package:puzzle_arcade/sudoku/algorithm/sudoku_generator.dart';
+import 'package:puzzle_arcade/sudoku/difficulty/given_count_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/model/generated_puzzle.dart';
 import 'package:puzzle_arcade/env.dart';
 
 class SudokuSession extends StatefulWidget {
   const SudokuSession({super.key});
 
   @override
-  _SudokuSessionState createState() => _SudokuSessionState();
+  State<SudokuSession> createState() => _SudokuSessionState();
 }
 
 class _SudokuSessionState extends State<SudokuSession>{

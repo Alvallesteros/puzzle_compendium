@@ -1,10 +1,10 @@
 import 'dart:math';
-import 'package:puzzle_arcade/sudoku/sudoku_solver.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_puzzle.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_difficulty.dart';
-import 'package:puzzle_arcade/sudoku/generated_puzzle.dart';
-import 'package:puzzle_arcade/sudoku/sudoku_classifier.dart';
-import 'package:puzzle_arcade/sudoku/solver_classified_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/algorithm/sudoku_solver.dart';
+import 'package:puzzle_arcade/sudoku/model/sudoku_puzzle.dart';
+import 'package:puzzle_arcade/sudoku/difficulty/sudoku_difficulty.dart';
+import 'package:puzzle_arcade/sudoku/model/generated_puzzle.dart';
+import 'package:puzzle_arcade/sudoku/algorithm/sudoku_classifier.dart';
+import 'package:puzzle_arcade/sudoku/difficulty/solver_classified_difficulty.dart';
 
 
 class SudokuGenerator {

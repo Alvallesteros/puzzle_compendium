@@ -81,7 +81,7 @@ class SudokuSolver {
     return usageSets;
   }
 
-  static _place(
+  static void _place(
     List<List<int?>> grid,
     List<Set<int>> usedRows,
     List<Set<int>> usedCols,
@@ -94,7 +94,7 @@ class SudokuSolver {
     usedBoxes[_boxIndex(row, col)].add(digit);
   }
 
-  static _undo(
+  static void _undo(
     List<List<int?>> grid,
     List<Set<int>> usedRows,
     List<Set<int>> usedCols,
