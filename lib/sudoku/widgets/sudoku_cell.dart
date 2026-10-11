@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
 
+typedef CellContent = ({int? value, bool isGiven, Set<int> notes});
+typedef CellAppearance = ({bool isSelected, bool isInvalid, bool isPeer});
+
 class SudokuCell extends StatelessWidget {
   const SudokuCell({
     super.key, 
-    required this.value, 
-    required this.isGiven,
-    required this.isInvalid, 
-    required this.isSelected,
-    required this.isPeer, 
+    required this.content,
+    required this.appearance,
     required this.onTap, 
     this.thickRightBorder = false, 
     this.thickBottomBorder = false
   });
 
-  final int? value;
-  final bool isGiven;
-  final bool isInvalid;
-  final bool isSelected;
-  final bool isPeer;
+  final CellContent content;
+  final CellAppearance appearance;
   final VoidCallback onTap;
   final bool thickRightBorder;
   final bool thickBottomBorder;
@@ -28,11 +25,11 @@ class SudokuCell extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected
+          color: appearance.isSelected
               ? Colors.lightBlue
-              : isInvalid
+              : appearance.isInvalid
                   ? Colors.red
-                  : isPeer
+                  : appearance.isPeer
                     ? Colors.grey
                     : Colors.white,
           border: Border(
@@ -41,14 +38,38 @@ class SudokuCell extends StatelessWidget {
           )
         ),
         child: Center(
-          child: Text(
-            value?.toString() ?? '',
-            style: TextStyle(
-              fontSize: 24.0,
-              fontWeight: isGiven ? FontWeight.bold : FontWeight.normal,
-              color: Colors.black,
+          child: content.value != null 
+            ? Text(
+              content.value?.toString() ?? '',
+              style: TextStyle(
+                fontSize: 24.0,
+                fontWeight: content.isGiven ? FontWeight.bold : FontWeight.normal,
+                color: Colors.black,
+              )
             )
-          )
+            : content.notes.isNotEmpty 
+            ? Column(
+                children: List.generate(3, (col) =>
+                  Expanded(
+                    child: Row(
+                      children: List.generate(3, (row) =>
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              content.notes.contains(row + (col * 3) + 1) ? (row + (col * 3) + 1).toString() : '',
+                              style: TextStyle(
+                                fontSize: 10.0,
+                                color: Colors.teal
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            : Text('')
         )
       )
     );

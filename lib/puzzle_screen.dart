@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:puzzle_arcade/puzzle_catalog.dart';
-import 'package:puzzle_arcade/widgets/sudoku_session.dart';
+import 'package:puzzle_arcade/sudoku/widgets/sudoku_session.dart';
 
 class PuzzleScreen extends StatelessWidget {
   const PuzzleScreen({super.key, required this.puzzle});

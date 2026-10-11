@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle_arcade/widgets/sudoku_cell.dart';
-import 'package:puzzle_arcade/widgets/num_pad.dart';
+import 'package:puzzle_arcade/sudoku/widgets/sudoku_cell.dart';
+import 'package:puzzle_arcade/sudoku/widgets/num_pad.dart';
 import 'package:puzzle_arcade/sudoku/algorithm/sudoku_validator.dart';
 import 'package:puzzle_arcade/sudoku/algorithm/sudoku_generator.dart';
 import 'package:puzzle_arcade/sudoku/difficulty/given_count_difficulty.dart';
@@ -18,6 +18,7 @@ class _SudokuSessionState extends State<SudokuSession>{
   final GeneratedPuzzle generated = SudokuGenerator.generate(currentSeed(), GivenCountDifficulty(targetGivens: 79));
   (int, int)? selectedCell;
   final Map<(int, int), int> enteredValues = {};
+  final Map<(int, int), Set<int>> notes = {};
 
   void _select (int row, int col) {
     if (selectedCell != (row, col)) {
@@ -78,6 +79,7 @@ class _SudokuSessionState extends State<SudokuSession>{
     }
     setState(() {
       enteredValues[(row, col)] = digit;
+      _stripPeerNotes((row, col), digit);
     });
 
     final result = findConflicts(generated.puzzle, enteredValues);
@@ -114,6 +116,16 @@ class _SudokuSessionState extends State<SudokuSession>{
     });
   }
 
+  void _stripPeerNotes((int, int) cell, int digit) {
+    for (final peer in _peersOf(cell)) {
+      if (generated.puzzle.isGiven(peer.$1, peer.$2) || !notes.containsKey(peer)) continue;
+      if (notes[peer]!.contains(digit)) {
+        notes[peer]!.remove(digit);
+      }
+      if (notes[peer]!.isEmpty) notes.remove(peer);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final result = findConflicts(generated.puzzle, enteredValues);
@@ -137,11 +149,16 @@ class _SudokuSessionState extends State<SudokuSession>{
                           children: List.generate(9, (col) =>
                             Expanded(
                               child: SudokuCell(
-                                value: _displayValueAt(row, col), 
-                                isGiven: generated.puzzle.isGiven(row, col), 
-                                isSelected: selectedCell == (row, col),
-                                isInvalid: result.invalid.contains((row, col)),
-                                isPeer: peers.contains((row, col)),
+                                content: (
+                                  value: _displayValueAt(row, col), 
+                                  isGiven: generated.puzzle.isGiven(row, col), 
+                                  notes: notes[(row, col)] ?? {}
+                                ),
+                                appearance: (
+                                  isSelected: selectedCell == (row, col),
+                                  isInvalid: result.invalid.contains((row, col)),
+                                  isPeer: peers.contains((row, col)),
+                                ),
                                 thickRightBorder: col % 3 == 2 && col != 8,
                                 thickBottomBorder: row % 3 == 2 && row != 8,
                                 onTap: () => _select(row, col)
